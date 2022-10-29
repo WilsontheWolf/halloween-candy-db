@@ -27,17 +27,44 @@ const getRandomHome = async () => {
     return null;
 };
 
+const processSubmissions = (submissions) => {
+    const averages = {};
+
+    for (const submission of submissions) {
+        for (const [key, value] of Object.entries(submission)) {
+            if(key === 'noCandyReason') continue;
+            if (!averages[key]) averages[key] = [];
+            averages[key].push(value);
+        }
+    }
+
+    for (const [key, value] of Object.entries(averages)) {
+        averages[key] = value.reduce((a, b) => a + b, 0) / value.length;
+    }
+
+    return averages;
+};
+
+const processColors = (averages, length) => {
+    const hue = (averages.candyType + averages.candyCount ) * 10;
+    const saturation = Math.min(length / 5, 1);
+    const lightness = averages.candy;
+    return `hsl(${hue}, ${saturation * 100}%, ${lightness * 50}%)`;
+};
+
 const loadedPolygons = [];
 
 let map;
 
-const makePolygon = (coords, popup) => {
+const makePolygon = (coords, popup, {
+    color = 'grey',
+} = {}) => {
     if (!map) return;
     const polygon = new L.Polygon(coords, {
-        color: 'red',
+        color,
         weight: 1,
-        opacity: 0.5,
-        fillOpacity: 0.2,
+        opacity: 0.8,
+        fillOpacity: 0.5,
     });
     polygon.addTo(map);
     loadedPolygons.push(polygon);
@@ -55,7 +82,9 @@ const displayRandomHome = async () => {
     if (!home) return;
 
     clearPolygons();
-    const polygon = makePolygon(home.geometry.coordinates[0], `<h1>${home.id}</h1>`);
+    const polygon = makePolygon(home.geometry.coordinates[0], home.submissions ? `<h1>${home.id}</h1><p>${JSON.stringify({ ...processSubmissions(home.submissions), length: home.submissions.length}, null, 4)}</p>` : `<h1>${home.id}</h1>`, {
+        color: home.submissions ? processColors(processSubmissions(home.submissions), home.submissions.length) : undefined,
+    });
 
     map.fitBounds(polygon.getBounds());
 
@@ -68,7 +97,9 @@ const displaySpecificHome = async (id) => {
 
     if (!home) return;
 
-    const polygon = makePolygon(home.geometry.coordinates[0], `<h1>${home.id}</h1>`);
+    const polygon = makePolygon(home.geometry.coordinates[0], home.submissions ? `<h1>${home.id}</h1><p>${JSON.stringify({ ...processSubmissions(home.submissions), length: home.submissions.length}, null, 4)}</p>` : `<h1>${home.id}</h1>`, {
+        color: home.submissions ? processColors(processSubmissions(home.submissions), home.submissions.length) : undefined,
+    });
 
     map.fitBounds(polygon.getBounds());
 
@@ -94,7 +125,9 @@ const displayHomesInBounds = async () => {
 
     clearPolygons();
     homes.forEach(home => {
-        makePolygon(home.geometry.coordinates[0], `<h1>${home.id}</h1>`);
+        makePolygon(home.geometry.coordinates[0], home.submissions ? `<h1>${home.id}</h1><p>${JSON.stringify({ ...processSubmissions(home.submissions), length: home.submissions.length}, null, 4)}</p>` : `<h1>${home.id}</h1>`, {
+            color: home.submissions ? processColors(processSubmissions(home.submissions), home.submissions.length) : undefined,
+        });
     });
 };
 
