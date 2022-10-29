@@ -34,7 +34,7 @@ const getFile = async (name, ctx) => {
         console.error('Error loading data', e);
         process.exit(1);
     }
-    
+
     router.get('/', async (ctx) => {
         await getFile('index.html', ctx);
     });
@@ -69,15 +69,18 @@ const getFile = async (name, ctx) => {
 
     router.get('/api/homes/in', async (ctx) => {
         const { nwLat, nwLng, seLat, seLng } = ctx.query;
-        if(!nwLat || !nwLng || !seLat || !seLng) {
+        if (!nwLat || !nwLng || !seLat || !seLng) {
             ctx.status = 400;
             ctx.body = JSON.stringify({ error: 'Missing query parameters' });
             return;
         }
         const homes = data.filter(h => {
-            const [lat, lng] = h.geometry.coordinates[0][0];
-            return lat >= seLat && lat <= nwLat && lng >= nwLng && lng <= seLng;
+            // check if any one point is in the box
+            return h.geometry.coordinates[0].some(([lat, lng]) => {
+                return lat >= seLat && lat <= nwLat && lng >= nwLng && lng <= seLng;
+            });
         });
+
         ctx.body = JSON.stringify(homes);
         ctx.type = 'application/json';
     });
