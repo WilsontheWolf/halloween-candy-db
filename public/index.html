@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css"
+        integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14=" crossorigin="" />
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js"
+        integrity="sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91xHSyKhg=" crossorigin=""></script>
+
+    <script src="main.js"></script>
+</head>
+
+<body>
+    <h1>Map</h1>
+    <p>
+        <button id="random-home">Random Home</button>
+    </p>
+    <p>
+        <input type="text" id="home-id" name="home">
+        <button type="submit" id="home-id-button">Go to specific home id</button>
+    </p>
+    <p>
+        <button id="inbound-homes">See all homes in bounds</button>
+    </p>
+    <div id="map" style="height: 500px;"></div>
+</body>
+
+</html>
