@@ -115,7 +115,12 @@ const makeHomePopup = (home) => {
     };
     popup.appendChild(submit);
 
-
+    const refresh = document.createElement('button');
+    refresh.innerText = 'Refresh';
+    refresh.onclick = () => {
+        return window.hcdb.updateLoadedHome(home.id);
+    };
+    popup.appendChild(refresh);
     return popup;
 };
 const makePolygon = (coords, popup, {

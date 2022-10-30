@@ -54,6 +54,7 @@ docker run -it --rm -p 3000:3000 -v $(pwd)/data:/app/data ghcr.io/wilsonthewolf/
 First make sure you have node.js v16.x or higher installed. Then run the following commands:
 ```sh
 npm install # or yarn install
+mkdir data
 npm run setup # or yarn setup
 ```
 
