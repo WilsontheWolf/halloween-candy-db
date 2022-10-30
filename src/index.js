@@ -3,10 +3,12 @@ import koa from 'koa';
 import koaRouter from '@koa/router';
 import bodyParser from 'koa-bodyparser';
 import path from 'node:path';
-import enmap from 'enmap';
+import Enmap from 'enmap';
+import crypto from 'node:crypto';
 
-const homeDB = new enmap({ name: 'home' });
-const tokenDB = new enmap({ name: 'token' });
+const homeDB = new Enmap({ name: 'home' });
+const tokens = new Enmap({ name: 'token' });
+const accounts = new Enmap({ name: 'accounts' });
 
 const allowTesting = process.env.NODE_ENV === 'development';
 
@@ -26,7 +28,7 @@ const mimes = {
 };
 
 const getFile = async (name, ctx) => {
-    const data = await fs.readFile(path.join('./public', name), 'utf-8');
+    const data = await fs.readFile(path.join('./src/public', name), 'utf-8');
     const file = path.extname(name).replace('.', '');
     ctx.body = data;
     ctx.type = mimes[file] || 'text/plain';
@@ -42,6 +44,47 @@ const processHome = (home, submissions) => {
     return end;
 };
 
+
+/*
+Must either be:
+{ 
+    "candy": true, 
+    "candyType": 1, // Number between 0 and 1 
+    "candyCount": 1, // Number between 0 and 1
+ }
+
+ or 
+ {
+    "candy": false,
+    "noCandyReason": "notHome" | "noCandy"
+ }
+*/
+const validateCandy = (candy) => {
+    if(typeof candy.candy !== 'boolean') return false;
+    if (candy.candy) {
+        if (candy.candyType === undefined || candy.candyCount === undefined)
+            return false;
+        if (typeof candy.candyType !== 'number' || typeof candy.candyCount !== 'number')
+            return false;
+        if (candy.candyType < 0 || candy.candyType > 1)
+            return false;
+        if (candy.candyCount < 0 || candy.candyCount > 1)
+            return false;
+    } else {
+        if (candy.noCandyReason !== 'notHome' && candy.noCandyReason !== 'noCandy')
+            return false;
+    }
+    return true;
+};
+
+const genToken = (account) => {
+    let token = crypto.randomBytes(32).toString('hex');
+    while (tokens.has(token))
+        token = crypto.randomBytes(32).toString('hex');
+
+    tokens.set(token, account);
+    return token;
+};
 
 (async () => {
     let data;
@@ -59,6 +102,10 @@ const processHome = (home, submissions) => {
 
     router.get('/main.js', async (ctx) => {
         await getFile('main.js', ctx);
+    });
+
+    router.get('/main.css', async (ctx) => {
+        await getFile('main.css', ctx);
     });
 
 
@@ -128,7 +175,7 @@ const processHome = (home, submissions) => {
             return;
         }
 
-        const reqData = await ctx.request.body;
+        const reqData = ctx.request.body;
 
         if (!reqData) {
             ctx.status = 400;
@@ -143,22 +190,9 @@ const processHome = (home, submissions) => {
             candyCount,
         } = reqData;
 
-        if (candy === undefined) {
+        if (!validateCandy(reqData)) {
             ctx.status = 400;
-            ctx.body = JSON.stringify({ error: 'Missing request data' });
-            return;
-        }
-
-
-        else if (!candy && ((candyType || candyCount) || !noCandyReason)) {
-            ctx.status = 400;
-            ctx.body = JSON.stringify({ error: 'Invalid request data' });
-            return;
-        }
-
-        else if (candy && !candyType && !candyCount) {
-            ctx.status = 400;
-            ctx.body = JSON.stringify({ error: 'Invalid request data' });
+            ctx.body = JSON.stringify({ error: 'Invalid candy data' });
             return;
         }
 
@@ -181,11 +215,11 @@ const processHome = (home, submissions) => {
         for (const house of data) {
             homeDB.ensure(house.id, {});
             for (let i = 0; i < Math.random() * 5; i++) {
-                const candy = true; //Math.random() > 0.5;
+                const candy = Math.random() > 0.5;
                 let obj = { candy };
                 if (candy) {
-                    obj.candyType = Math.round(Math.random() * 5);
-                    obj.candyCount = Math.round(Math.random() * 5);
+                    obj.candyType = Math.random();
+                    obj.candyCount = Math.random();
                 } else {
                     obj.noCandyReason = Math.random() > 0.5 ? 'noCandy' : 'noHome';
                 }
@@ -223,6 +257,117 @@ const processHome = (home, submissions) => {
         ctx.type = 'application/json';
     });
 
+    router.post('/api/register', async (ctx) => {
+        const reqData = ctx.request.body;
+
+        if (!reqData) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Missing request data' });
+            return;
+        }
+
+        let {
+            username,
+            password,
+        } = reqData;
+
+        username = username.trim().toLowerCase();
+
+        if (!username || !password) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Missing request data' });
+            return;
+        }
+
+        if (username.length < 3 || username.length > 20) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Username must be between 3 and 20 characters' });
+            return;
+        }
+
+        if (password.length < 8 || password.length > 100) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Password must be between 8 and 100 characters' });
+            return;
+        }
+
+        if (accounts.get(username)) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Username already taken' }); 
+            return;
+        }
+
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+
+        accounts.set(username, {
+            salt,
+            hash,
+        });
+
+        const token = genToken(username);
+
+        ctx.body = JSON.stringify({ success: true, token });
+        ctx.type = 'application/json';
+    });
+
+    router.post('/api/login', async (ctx) => {
+        const reqData = ctx.request.body;
+
+        if (!reqData) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Missing request data' });
+            return;
+        }
+
+        let {
+            username,
+            password,
+        } = reqData;
+
+        username = username.trim().toLowerCase();
+
+        if (!username || !password) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Missing request data' });
+            return;
+        }
+
+        const account = accounts.get(username);
+
+        if (!account) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Invalid username or password' });
+            return;
+        }
+
+        const hash = crypto.pbkdf2Sync(password, account.salt, 1000, 64, 'sha512').toString('hex');
+
+        if (hash !== account.hash) {
+            ctx.status = 400;
+            ctx.body = JSON.stringify({ error: 'Invalid username or password' });
+            return;
+        }
+
+        const token = genToken(username);
+
+        ctx.body = JSON.stringify({ success: true, token });
+        ctx.type = 'application/json';
+    });
+
+    router.get('/api/me', async (ctx) => {
+        const account = ctx.account;
+
+        if (!account) {
+            ctx.status = 401;
+            ctx.body = JSON.stringify({ error: 'Unauthorized' });
+            return;
+        }
+
+        ctx.body = JSON.stringify({ success: true, username: account });
+        ctx.type = 'application/json';
+    });
+    
 
     const handleAuth = async (ctx, next) => {
         const { authorization } = ctx.headers;
@@ -230,7 +375,7 @@ const processHome = (home, submissions) => {
             return await next();
         }
 
-        const account = tokenDB.get(authorization);
+        const account = tokens.get(authorization);
         if (!account) {
             return await next();
         }
