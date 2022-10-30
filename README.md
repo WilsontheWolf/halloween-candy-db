@@ -1,7 +1,24 @@
 # Halloween Candy DB
 
 This is a project made for the 2022 University of Lethbridge Hack'o'Ween.
-The goal is to be a database of Halloween candy, with the ability to add, edit, and delete entries.
+
+## What is this?
+
+Halloween Candy DB is a crowdsourced database of Halloween candy. It is a web app that allows you to see nearby house's and their candy data, and submit feedback about said houses. 
+
+## Technology:
+HCDB is built using the following technologies:
+
+Server:
+- [Node.js](https://nodejs.org/)
+- [Koa](https://koajs.com/) ([koa bodyparser](https://github.com/koajs/bodyparser), [koa router](https://github.com/koajs/router))
+- [Enmap](https://enmap.evie.dev/) (Storage)
+- [OpenStreetMap](https://openstreetmap.org/)'s [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) (Get building locations) using [query-overpass](https://npmjs.org/query-overpass) 
+
+Client:
+- HTML, CSS and JS
+- [Leaflet](https://leafletjs.com/) (Map) (using [OpenStreetMap](https://openstreetmap.org/)'s tiles)
+- [SweetAlert2](https://sweetalert2.github.io/) (Alerts)
 
 ## Docker
 This project has a docker image to pull. Theres a bit of setup though.
@@ -14,6 +31,8 @@ docker pull ghcr.io/wilsonthewolf/halloween-candy-db:latest
 
 Next you need to setup the map data. This is done by running the following command:
 ```bash
+mkdir data
+chown 1000:1000 data
 docker run -it --rm -v $(pwd)/data:/app/data ghcr.io/wilsonthewolf/halloween-candy-db:latest sh -c 'node src/download.js && node src/process.js'
 ```
 
