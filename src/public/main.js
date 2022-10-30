@@ -321,6 +321,7 @@ window.hcdb.promptSubmission = async (id) => {
             },
             inputPlaceholder: 'Select a reason',
             showCancelButton: true,
+            allowOutsideClick: false,
             inputValidator: (value) => {
                 if (!value) {
                     return 'You need to select a reason!';
@@ -360,6 +361,7 @@ window.hcdb.promptSubmission = async (id) => {
         },
         inputPlaceholder: 'Select a rating',
         showCancelButton: true,
+        allowOutsideClick: false,
         inputValidator: (value) => {
             if (!value) {
                 return 'You need to select a rating!';
@@ -386,6 +388,7 @@ window.hcdb.promptSubmission = async (id) => {
         },
         inputPlaceholder: 'Select a rating',
         showCancelButton: true,
+        allowOutsideClick: false,
         inputValidator: (value) => {
             if (!value) {
                 return 'You need to select a rating!';
@@ -543,6 +546,7 @@ window.hcdb.welcome = async () => {
     const tutorialPrompt = Swal.mixin({
         confirmButtonText: 'Next &rarr;',
         showCancelButton: true,
+        allowOutsideClick: false,
         cancelButtonText: 'Skip',
         progressSteps: ['1', '2', '3', '4', '5', '6'],
     });
