@@ -41,7 +41,7 @@ const processHome = (home, submissions, user) => {
     if (submissions)
         end.submissions = Object.values(submissions);
 
-    if(user && submissions[user]) 
+    if(user && submissions?.[user]) 
         end.submission = submissions[user];
 
     return end;
