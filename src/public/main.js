@@ -10,8 +10,13 @@ window.hcdb = {};
 
 const getHome = async (id) => {
     let req;
+    const token = localStorage.getItem('token');
     try {
-        req = await fetch(`/api/house/${id}`);
+        req = await fetch(`/api/house/${id}`, token ? {
+            headers: {
+                Authorization: `${token}`,
+            },
+        } : {});
     } catch (e) {
         return null;
     }
@@ -23,8 +28,13 @@ const getHome = async (id) => {
 
 const getRandomHome = async () => {
     let req;
+    const token = localStorage.getItem('token');
     try {
-        req = await fetch('/api/house/random');
+        req = await fetch('/api/house/random', token ? {
+            headers: {
+                Authorization: `${token}`,
+            },
+        } : {});
     } catch (e) {
         return null;
     }
@@ -121,6 +131,20 @@ const makeHomePopup = (home) => {
         return window.hcdb.updateLoadedHome(home.id);
     };
     popup.appendChild(refresh);
+
+    if (home.submission) {
+        const submission = document.createElement('p');
+        submission.innerText = 'You have already submitted a report for this home!';
+        popup.appendChild(submission);
+
+        const deleteSubmission = document.createElement('button');
+        deleteSubmission.innerText = 'Delete Submission';
+        deleteSubmission.onclick = () => {
+            return window.hcdb.deleteSubmission(home.id);
+        };
+
+        popup.appendChild(deleteSubmission);
+    }
     return popup;
 };
 const makePolygon = (coords, popup, {
@@ -182,8 +206,12 @@ const getHomeInBounds = async (nw, se) => {
         se = bounds.getSouthEast();
     }
 
-
-    return await fetch(`/api/homes/in?nwLat=${nw.lat}&nwLng=${nw.lng}&seLat=${se.lat}&seLng=${se.lng}`)
+    const token = localStorage.getItem('token');
+    return await fetch(`/api/homes/in?nwLat=${nw.lat}&nwLng=${nw.lng}&seLat=${se.lat}&seLng=${se.lng}`, token ? {
+        headers: {
+            Authorization: `${token}`,
+        },
+    } : {})
         .then(res => {
             if (res.ok) return res.json();
             else return null;
@@ -424,6 +452,30 @@ window.hcdb.promptSubmission = async (id) => {
 
 };
 
+window.hcdb.deleteSubmission = async (id) => {
+    const { value: confirm } = await Swal.fire({
+        title: 'Are you sure you want to delete this submission?',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Yes',
+        denyButtonText: 'No',
+        icon: 'question',
+    });
+
+    if (!confirm) return;
+
+    await submitWithAlert(`/api/house/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: window.hcdb.auth.token,
+        },
+    });
+
+    await window.hcdb.updateLoadedHome(id);
+
+};
+
 let accountSpan;
 
 const updateAccountSpan = async () => {
@@ -447,7 +499,7 @@ const updateAccountSpan = async () => {
         accountSpan.appendChild(a2);
 
     }
-    const help  = document.createElement('a');
+    const help = document.createElement('a');
     help.href = 'javascript:hcdb.welcome()';
     help.innerText = 'Help';
     accountSpan.innerHTML += ' - ';
@@ -632,7 +684,7 @@ svgElement.innerHTML = `<svg viewbox="0 0 200 200" class="radar">
 </svg>`;
 
 const displayInCircle = async () => {
-    if(!displayCircle) return;
+    if (!displayCircle) return;
     // Only find the homes in the displayCircle
     const homesInCircle = storedHomes.filter((home) => {
         const coords = new L.LatLng(home.geometry.coordinates[0][0][0], home.geometry.coordinates[0][0][1]);
@@ -710,7 +762,7 @@ const updatePosition = async (pos) => {
         homes = await getHomeInBounds({ lat: nwLat, lng: nwLng }, { lat: seLat, lng: seLng });
 
         storedHomes = homes;
-    } 
+    }
 
     await displayInCircle();
 
@@ -877,7 +929,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await updateAccountSpan();
 
-    if(window.localStorage.getItem('welcome') !== 'true') {
+    if (window.localStorage.getItem('welcome') !== 'true') {
         await window.hcdb.welcome();
     }
 

@@ -34,12 +34,15 @@ const getFile = async (name, ctx) => {
     ctx.type = mimes[file] || 'text/plain';
 };
 
-const processHome = (home, submissions) => {
+const processHome = (home, submissions, user) => {
     const end = { ...home };
 
     delete end.tags;
     if (submissions)
         end.submissions = Object.values(submissions);
+
+    if(user && submissions[user]) 
+        end.submission = submissions[user];
 
     return end;
 };
@@ -119,7 +122,7 @@ const genToken = (account) => {
     router.get('/api/house/random', async (ctx) => {
         const randomHouse = data[Math.floor(Math.random() * data.length)];
         const submissions = homeDB.get(randomHouse.id);
-        ctx.body = JSON.stringify(processHome(randomHouse, submissions));
+        ctx.body = JSON.stringify(processHome(randomHouse, submissions, ctx.account));
         ctx.type = 'application/json';
     });
 
@@ -131,7 +134,7 @@ const genToken = (account) => {
             return;
         }
         const submissions = homeDB.get(house.id);
-        ctx.body = JSON.stringify(processHome(house, submissions));
+        ctx.body = JSON.stringify(processHome(house, submissions, ctx.account));
         ctx.type = 'application/json';
     });
 
@@ -151,7 +154,7 @@ const genToken = (account) => {
 
         ctx.body = JSON.stringify(homes.map(h => {
             const submissions = homeDB.get(h.id);
-            return processHome(h, submissions);
+            return processHome(h, submissions, ctx.account);
 
         }));
         ctx.type = 'application/json';
